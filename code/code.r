@@ -24,7 +24,8 @@ webshot::install_phantomjs()
 #2.Descripción del dataset
 
 #Lectura del archivo de descripción
-desc<-read.csv("Data Description.csv")
+
+desc<-("../data_files/Data Description.csv")
 names(desc)<-c("Variable", "Descripción del valor")
 kable_styling(kable(desc, format='html', caption = "Descripcion valores de CO2 Emissio
 ns_Canada"))
@@ -33,7 +34,7 @@ ns_Canada"))
 
 #Carga del juego de datos
 
-co2<-read.csv("CO2 Emissions_Canada.csv")
+co2<-read.csv("../data_files/CO2 Emissions_Canada.csv")
 str(co2)
 
 #Transformación a factores
