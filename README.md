@@ -1,6 +1,8 @@
-# analisis_coches_canada
+# Canada cars analysis
 
-## Breve descripción
+## Brief description
+
+In this work, we have created a project in R analyzing the emissions of the Canadian cars. 
 
 En esta práctica, hemos querido realizar un proyecto que analice las emisiones de determinados vehículos en Canadá, a partir de un dataset público. Se realizan los tratamientos oportunos a los datos iniciales, y después, se les realizan algunas pruebas para obtener determinadas conclusiones.
 
