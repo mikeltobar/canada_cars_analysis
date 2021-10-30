@@ -1,15 +1,19 @@
 # Canada cars analysis
+![Cars](https://cdn.pixabay.com/photo/2019/04/29/05/12/indoor-4165199_1280.jpg)
 
-## Brief description
+## Introduction
 
-In this work, we have created a project in R analyzing the emissions of the Canadian cars. 
+This is an analysis of a dataset containing many of the cars present in Canada and their pollution. It was first published by the Canadian Federal Government, but the one chosen for this notebook has been taken from Kaggle. You can find the files:
 
-En esta práctica, hemos querido realizar un proyecto que analice las emisiones de determinados vehículos en Canadá, a partir de un dataset público. Se realizan los tratamientos oportunos a los datos iniciales, y después, se les realizan algunas pruebas para obtener determinadas conclusiones.
+* In [Open Data Canada](https://open.canada.ca/data/en/dataset/98f1a129-f628-4ce4-b24d-6f16bf24dd64) 
+* In [Kaggle](https://www.kaggle.com/debajyotipodder/co2-emission-by-vehicles)
 
-## Equipo
+The license of the Kaggle dataset is "Open Database", so it can be shared, modified and used freely. 
 
-La práctica ha sido realizada por Mikel Álvarez Rua y Mikel Tobar del Barrio.
+## Authors
 
-## Ficheros del repositorio
+This work has been made by Mikel Álvarez Rua and Mikel Tobar del Barrio.
 
-Se pueden encontrar en este repositorio, el presente fichero README, el documento pdf en el que se explica al detalle la práctica llevada a cabo, los 2 archivos csv originales y el archivo csv limpio obtenido (carpeta data_files) y el script que permite analizar los datos de los coches (en R y RMarkdown, carpeta code).
+## Files
+
+You can find in the repository some files related to the work, such as the source datasets, preliminary cleanings done in python or an R analysis.
