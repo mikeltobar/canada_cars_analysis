@@ -1,0 +1,247 @@
+---
+always_allow_html: true
+title: "CO2_Emissions_Canada"
+author: 'Mikel Alvarez Rua y Mikel Tobar del Barrio'
+date: "8 de Junio de 2021"
+output:
+  github_document:
+    pandoc_args: --webtex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Libraries
+
+```{r message=FALSE, warning=FALSE}
+#install.packages("ggplot2")
+library("ggplot2")
+#install.packages("gridExtra")
+library("gridExtra")
+#install.packages("fastDummies)
+library("fastDummies")
+#install.packages("kableExtra2")
+library("kableExtra")
+#install.packages("boruta")
+library("Boruta")
+#install.packages("ggcorrplot")
+library("ggcorrplot")
+#install.packages("pROC")
+library("pROC")
+#install.packages("tinytex")
+library("tinytex")
+#install.packages("webshot")
+library("rquery")
+#webshot::install_phantomjs()
+```
+
+```{r global_options}
+knitr::opts_chunk$set(fig.path='Figs/')
+```
+
+## Loading the data
+
+We will pick the data from the file we produced in the initial Jupyter Notebook.
+
+```{r message=FALSE, warning=FALSE}
+co2<-read.csv("co2_clean.csv")
+```
+
+## Outlier check
+
+We will make boxplots to check for outlier values.
+
+```{r , message=FALSE, warning=FALSE}
+nums<-colnames(co2[sapply(co2,is.numeric)])
+myplots <- vector('list', length(nums))
+for (i in seq(1:length(nums))){
+  message(i)
+  myplots[[i]] <- local({
+  i <- i
+  h<-ggplot(co2, aes(y=.data[[nums[i]]])) +
+  geom_boxplot()+scale_fill_brewer(palette="Dark2")+
+  labs(y=nums[i])
+})
+}
+do.call("grid.arrange", c(myplots, ncol=3))
+```
+
+## Data analysis
+
+We want to know more about correlations, if there is a relationship between transmission and polution, and we want to see which variables make the car more polluting. For this, we will do the following
+
+* Correlations analysis to study the interferences between variables.
+* Hypothesis contrast to study the pollution vs transmission theory. 
+* Logistical regression to test the relevance of each variable vs vehicle pollution.
+
+For this, we will use three samples.
+
+* All cars.
+* Manual cars sample.
+* Non-manual cars sample.
+
+```{r }
+manual_auto <- co2[ ,c("TransmissionType", "C02.g.km")]
+comp_manual <- subset(co2 , TransmissionType == "M")
+comp_rest <- subset(co2 , TransmissionType != "M")
+comp_manual$manual<-"Manual"
+comp_rest$manual<-"Rest"
+```
+
+## Variance analysis
+
+For our statistical tests we need to check normality and homogeneity of the variance in the work variables. We will apply the Central Limit Theorem principle that justifies that samples bigger than 30 will tend to be normal. We will just double check sizes and plot each distribution.
+
+```{r}
+nrow(comp_manual)
+nrow(comp_rest)
+ggplot(data=comp_manual, aes(x=C02.g.km, fill=manual))+ geom_density(alpha=0.4)+
+  ggtitle("Density plot of CO2 emissions on Transmission")+geom_density(data = comp_rest, aes(x=C02.g.km), alpha=0.4)+
+  xlab(expression(paste(CO^{2},frac(g,km))))+labs(fill="Transmission")
+```
+
+Then, we will need to test variances of both samples. It's a bilateral test, with a 95% confidence interval where our hypotheses are:
+
+$$H_0: \sigma_{manual} = \sigma_{rest} $$
+$$H_1: \sigma_{manual} \neq \sigma_{rest} $$
+
+```{r }
+varianceTest <- function(x,y){
+  var.test(x,y)
+}
+varianceTest(comp_manual$C02.g.km, comp_rest$C02.g.km)
+```
+
+A p-value of almost 0 means there is heterocedasticity between variances.
+
+## Tests
+
+We will now carry out an hypothesis contrast, with the following considerations.
+
+1. It is a 2-sample contrast.
+
+2. We assume normality and heterocedasticity.
+
+3. We will use parametric tests, assuming normality.
+
+4. We will use unilateral tests, as we only want to analyze the higher-end of the distribution.  
+
+5. We will work with unknown variance, as theoretically we don't have every single car in Canadian roads in our sample.
+
+6. Null hypothesys is that manual cars don't pollute less than the others, and alternative is that they do.
+
+Our chosen test is the following:
+
+$$t=\frac{\overline{x}_1-\overline{x}_2}{\sqrt{\frac{s^2_1}{n_1}+\frac{s^2_2}{n_2}}}\sim  t\nu$$
+
+Critical q norm is:
+
+```{r }
+qnorm(0.05)
+```
+
+This will delimit the null rejection zone, which is (-∞, -1.64] as well as the acceptance zone (-1.64, ∞).
+
+We will now make the corresponding test.
+
+```{r }
+t.test(comp_manual$C02.g.km, comp_rest$C02.g.km,alternative=c("greater"))
+```
+
+In this case, we can assert the alternative hypothesis proves true, as p-value is of almost 0, and t-value is of -15.892. Therefore **manuals pollute more than automatics**.
+
+
+### Correlations
+
+We will check correlations between variables. We need to transform each cathegorical variable in boolean.
+
+```{r }
+results <- dummy_cols(co2, select_columns = c("Transmission", "Fuel.Type"))
+results$Fuel.Type<-NULL
+
+nums2<-results[,colnames(results[sapply(results,is.numeric)])]
+nums2$Gears<-NULL
+source("http://www.sthda.com/upload/rquery_cormat.r")
+cormat<-rquery.cormat(nums2, type="flatten", graph = FALSE)
+cormat.ordered<-head(cormat$r[order(abs(cormat$r$cor), decreasing = TRUE),],20)
+kable_styling(kable(cormat.ordered, format='html', caption = "Correlations between variables"))
+```
+
+The analysis is a bit disappointing since all correlations are evident.
+
+### Logistical regression
+
+We will now study emissions via a logistical regression. We can use a new flag to try to classify cars in two groups: less polluting and more polluting.
+
+```{r }
+ggplot(data = co2, aes(x=C02.g.km)) + geom_histogram() +
+  annotate(geom = "vline",
+             x = median(co2$C02.g.km),
+             xintercept = median(co2$C02.g.km),
+             linetype = "dashed")+
+  annotate(geom = "text",
+             label = "Median",
+             x = median(co2$C02.g.km),
+             y = 300,
+             angle = 90, 
+             vjust = 1)+
+  ggtitle("Histogram of CO2 emissions")+
+  xlab(expression(paste(CO^{2},frac(g,km))))
+summary(co2$C02.g.km)
+```
+
+Median (246 g) of $CO^2$ will be the limit between groups.
+
+```{r }
+co2["co2.g.km.binary"] <- cut(co2$C02.g.km, breaks = c(0,246,10000), labels = c("0","1"))
+```
+
+```{r, message=F}
+co2.boruta<-co2
+co2.boruta$Gears<-NULL
+co2.boruta$CO2.g.km<-NULL
+boruta.co2 <- Boruta(co2.g.km.binary~., data = co2.boruta, doTrace = 2)
+```
+
+```{r fig.height=10}
+print(boruta.co2)
+par(mar=c(10,5,5,5)+.1)
+plot(boruta.co2, xlab= "", las=3)
+#text(par("usr")[3] - 0.2,  srt = 45, pos = 1, xpd = TRUE)
+```
+
+Regression:
+
+```{r }
+co2.boruta$Model<-NULL
+glm.co2<- glm(co2.g.km.binary~., family=binomial, data=co2.boruta)
+```
+```{r }
+summary(glm.co2)
+```
+
+Fuel type and consumption are among the most significant variables, whereas other aren't as significative, such as brand and car model.
+
+## Graphs
+
+For correlations:
+
+```{r }
+corrs <- round(cor(nums2), 2)
+ggcorrplot(corrs)
+```
+
+We see how we have some fuel types as Diesel or Common Petrol where there is a positive correlation with consumption and $CO^2$ emissions, while etanol and premium petrol have negative correlations.
+
+We will plot the ROC curve fot the correlation.
+
+```{r }
+p1=predict(glm.co2, co2.boruta, type="response")
+r1=roc(co2.boruta$co2.g.km.binary,p1, data=co2.boruta)
+plot(r1)
+auc(r1)
+```
+
+
+With an area under the curve of 0.9997, logistical regression model can be considered as very good. This is because $CO^2$ emissions and fuel consumption are very correlated.
