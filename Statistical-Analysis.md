@@ -1,7 +1,6 @@
 CO2\_Emissions\_Canada
 ================
-Mikel Alvarez Rua y Mikel Tobar del Barrio
-8 de Junio de 2021
+Mikel Alvarez Rua and Mikel Tobar del Barrio
 
 # Libraries
 
